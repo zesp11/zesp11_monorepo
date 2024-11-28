@@ -3,4 +3,4 @@
 - Kacper Urbański
 - Paweł Charysz
 - Kamil Konarzewski
-
+- Cezary Arszyński
