@@ -3,4 +3,5 @@
 - Kacper Urbański
 - Paweł Charysz
 - Kamil Konarzewski
+- Franciszek Szary
 
