@@ -16,6 +16,7 @@ class SearchService {
         results.add({
           'name': item['name'],
           'type': item['type'],
+          'id': item['id'],
         });
       }
 

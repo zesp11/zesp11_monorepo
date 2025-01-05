@@ -76,6 +76,23 @@ class SearchController extends GetxController {
       results =
           await searchService.search(query, 'all'); // Filter based on the query
     }
+
     filteredItems.value = results;
+  }
+
+  // Filter items based on the selected filters (e.g., 'User', 'Game', 'Scenario')
+  void filterItemsByTypes(RxList<String> selectedFilters) {
+    // Get all items
+    List<Map<String, String>> filteredList = [];
+
+    // Filter the items based on the selected filter types
+    for (var item in allItems.value) {
+      if (selectedFilters.isEmpty || selectedFilters.contains(item['type'])) {
+        filteredList.add(item);
+      }
+    }
+
+    // Update filteredItems with the result of filtering
+    filteredItems.value = filteredList;
   }
 }
