@@ -9,11 +9,10 @@ import 'package:goadventure/app/services/game_service.dart';
 import 'package:goadventure/app/services/home_service.dart';
 import 'package:goadventure/app/services/search_service.dart';
 import 'package:goadventure/app/services/user_service.dart';
+import 'package:goadventure/main.dart';
 
 class AppBindings extends Bindings {
-  final bool isProduction;
-
-  AppBindings({required this.isProduction});
+  AppBindings();
 
   @override
   void dependencies() {
@@ -25,17 +24,15 @@ class AppBindings extends Bindings {
     }
 
     // Register UserService using the injected ApiService
-    Get.lazyPut<UserService>(() => UserService(apiService: Get.find()));
-    Get.lazyPut<SearchService>(() => SearchService(apiService: Get.find()));
-    Get.lazyPut<HomeService>(() => HomeService(apiService: Get.find()));
-    Get.lazyPut<GameService>(() => GameService(apiService: Get.find()));
+    Get.put<UserService>(UserService(apiService: Get.find()));
+    Get.put<SearchService>(SearchService(apiService: Get.find()));
+    Get.put<HomeService>(HomeService(apiService: Get.find()));
+    Get.put<GameService>(GameService(apiService: Get.find()));
 
     // Register controllers that need ApiService
-    Get.lazyPut<ProfileController>(
-        () => ProfileController(userService: Get.find()));
-    Get.lazyPut<HomeController>(() => HomeController(homeService: Get.find()));
-    Get.lazyPut<GameController>(() => GameController(gameService: Get.find()));
-    Get.lazyPut<SearchController>(
-        () => SearchController(searchService: Get.find()));
+    Get.put<ProfileController>(ProfileController(userService: Get.find()));
+    Get.put<HomeController>(HomeController(homeService: Get.find()));
+    Get.put<GameController>(GameController(gameService: Get.find()));
+    Get.put<SearchController>(SearchController(searchService: Get.find()));
   }
 }
