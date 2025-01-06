@@ -2,84 +2,50 @@ import 'package:flutter/material.dart';
 import 'package:goadventure/app/controllers/auth_controller.dart';
 import 'package:goadventure/app/controllers/profile_controller.dart';
 import 'package:get/get.dart';
+import 'package:goadventure/app/pages/error_screen.dart';
+import 'package:goadventure/app/pages/widgets/user_profile.dart';
 
-class UserProfileScreen extends StatelessWidget {
-  final ProfileController controller =
-      Get.put(ProfileController(userService: Get.find()));
-  final authController = Get.find<AuthController>();
+// TODO: redirect to /profile if its user own profile, but using middleware
+class UserProfileScreen extends GetView<ProfileController> {
+  final AuthController authController = Get.find<AuthController>();
 
-  // TODO: redirect to /profile if its user own profile, but using middleware
   @override
   Widget build(BuildContext context) {
     final String userId = Get.parameters['id']!;
 
-    if (authController.userProfile.value?.id == userId) {
-      // redirect to the logged-in users' profile screen
+    // Redirect to '/profile' if the user views their own profile
+    if (authController.state?.id == userId) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        Get.offNamed('/profile'); // Redirect to /profile if the IDs match
+        Get.offNamed('/profile');
       });
     }
+
+    // Fetch the user profile if it's not already loaded
+    if (controller.state?.id != userId) {
+      controller.fetchUserProfile(userId);
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("User Profile"),
       ),
-      body: Center(
-        child: FutureBuilder(
-          // Assume this method fetches profile by ID
-          future: controller.fetchUserProfile(userId),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const CircularProgressIndicator();
-            }
-
-            if (snapshot.hasError) {
-              return Text('Error: ${snapshot.error}');
-            }
-
-            // Check if userProfile is null before accessing its properties
-            final userProfile = controller.userProfile.value;
-
-            // If userProfile is null, return a placeholder
-            if (userProfile == null) {
-              return const Text('User profile not found.');
-            }
-
-            return Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                CircleAvatar(
-                  radius: 60,
-                  backgroundImage: userProfile.avatar.isNotEmpty
-                      ? NetworkImage(userProfile.avatar)
-                      : null,
-                  child: userProfile.avatar.isEmpty
-                      ? const Icon(Icons.person, size: 60, color: Colors.white)
-                      : null,
-                ),
-                const SizedBox(height: 20),
-                Text(userProfile.name,
-                    style: const TextStyle(
-                        fontSize: 28, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 10),
-                Text(userProfile.email,
-                    style: const TextStyle(fontSize: 18, color: Colors.grey)),
-                const SizedBox(height: 10),
-                Text(userProfile.bio,
-                    style: const TextStyle(fontSize: 16, color: Colors.grey),
-                    textAlign: TextAlign.center),
-                const SizedBox(height: 20),
-                Text("Games Played: ${userProfile.gamesPlayed}",
-                    style: const TextStyle(fontSize: 18, color: Colors.grey)),
-                const SizedBox(height: 5),
-                // Ensure that `gamesFinished` can be safely accessed
-                Text(
-                  "Games Finished: ${userProfile.gamesFinished ?? 'N/A'}", // Fallback to 'N/A' if gamesFinished is null
-                  style: const TextStyle(fontSize: 18, color: Colors.grey),
-                ),
-              ],
-            );
-          },
+      body: controller.obx(
+        // Success state
+        (userProfile) {
+          if (userProfile == null) {
+            return const Center(child: Text('User profile not found.'));
+          }
+          return Center(
+            child: UserProfileWidget(userProfile: userProfile),
+          );
+        },
+        onLoading: const Center(child: CircularProgressIndicator()),
+        onEmpty: const Center(child: Text('User profile not found.')),
+        onError: (error) => Center(
+          child: ErrorScreen(
+            error: error ?? 'An error occurred',
+            onRetry: () => controller.fetchUserProfile(userId),
+          ),
         ),
       ),
     );
