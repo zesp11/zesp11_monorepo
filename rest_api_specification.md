@@ -2,10 +2,51 @@
 
 ## Końcówki do Autoryzacji
 
-- Rejestracja:  
-  **POST /api/auth/register**  
-  Pozwala nowemu użytkownikowi zarejestrować się za pomocą loginu, adresu e-mail i hasła.  
-  Przykładowy payload:
+| Endpoint                                       | Metoda | Opis                                                                                        | Wymaga JWT |
+| ---------------------------------------------- | ------ | ------------------------------------------------------------------------------------------- | ---------- |
+| [**/api/auth/register**](#1-rejestracja)       | POST   | Umożliwia nowemu użytkownikowi zarejestrowanie się za pomocą loginu, adresu e-mail i hasła. | Nie        |
+| [**/api/auth/login**](#2-logowanie)            | POST   | Uwierzytelnia użytkownika i zwraca token JWT do dalszych zapytań.                           | Nie        |
+| [**/api/auth/logout**](#3-wylogowanie)         | POST   | Unieważnia token JWT, aby wylogować użytkownika.                                            | Tak        |
+| [**/api/auth/refresh**](#4-odświeżenie-tokenu) | POST   | Zwraca nowy token JWT, jeśli stary wygasł, ale nadal jest ważny.                            | Tak        |
+
+## Końcówki dla użytkownika
+
+| Endpoint                                                             | Metoda | Opis                                                                                 | Wymaga JWT |
+| -------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------ | ---------- |
+| [**/api/users/:id**](#1-pobierz-profil-użytkownika)                  | GET    | Pobiera profil użytkownika na podstawie podanego ID.                                 | Nie        |
+| [**/api/users/profile**](#2-pobierz-profil-zalogowanego-użytkownika) | GET    | Pobiera profil aktualnie zalogowanego użytkownika (wymaga JWT).                      | Tak        |
+| [**/api/users/profile**](#3-zaktualizuj-profil-użytkownika)          | PUT    | Aktualizuje profil aktualnie zalogowanego użytkownika.                               | Tak        |
+| [**/api/users**](#4-pobierz-wszystkich-użytkowników)                 | GET    | Pobiera listę wszystkich użytkowników                                                | Nie        |
+| [**/api/users/:id**](#5-usuń-użytkownika)                            | DELETE | Usuwa użytkownika o podanym ID (wymaga uprawnień administratora lub ważnego tokena). | Tak        |
+
+## Końcówki scenariuszy
+
+| Endpoint                                               | Metoda | Opis                                                               | Wymaga JWT |
+| ------------------------------------------------------ | ------ | ------------------------------------------------------------------ | ---------- |
+| [**/api/scenarios**](#1-pobierz-wszystkie-scenariusze) | GET    | Pobiera listę wszystkich dostępnych scenariuszy                    | Nie        |
+| [**/api/scenarios/:id**](#2-pobierz-scenariusz-po-id)  | GET    | Pobiera szczegółowe informacje o scenariuszu na podstawie jego ID. | Nie        |
+| [**/api/scenarios**](#3-stwórz-scenariusz)             | POST   | Tworzy nowy scenariusz na podstawie dostarczonych danych.          | Tak        |
+| [**/api/scenarios/:id**](#4-zaktualizuj-scenariusz)    | PUT    | Aktualizuje istniejący scenariusz na podstawie jego ID.            | Tak        |
+| [**/api/scenarios/:id**](#5-usuń-scenariusz)           | DELETE | Usuwa scenariusz na podstawie podanego ID.                         | Tak        |
+
+## Końcówki gry
+
+| Endpoint                                          | Metoda | Opis                                                                             | Wymaga JWT |
+| ------------------------------------------------- | ------ | -------------------------------------------------------------------------------- | ---------- |
+| [**/api/games**](#1-utwórz-grę)                   | POST   | Tworzy nową grę, wybiera scenariusz i inicjuje sesję początkową.                 | Tak        |
+| [**/api/games/:id**](#2-pobierz-status-gry)       | GET    | Pobiera status i szczegóły gry na podstawie ID.                                  | Nie        |
+| [**/api/games**](#3-pobierz-wszystkie-gry)        | GET    | Pobiera listę wszystkich gier.                                                   | Nie        |
+| [**/api/games/:id/step**](#4-pobierz-krok-gry)    | GET    | Pobiera szczegóły bieżącego kroku gry na podstawie ID gry.                       | Nie        |
+| [**/api/games/:id/step**](#5-aktualizuj-krok-gry) | POST   | Zaktualizowanie kroku w grze na podstawie ID gry i podjętej decyzji użytkownika. | Tak        |
+
+## Końcówki do Autoryzacji
+
+### 1. Rejestracja:
+
+**POST /api/auth/register**  
+ Pozwala nowemu użytkownikowi zarejestrować się za pomocą loginu, adresu e-mail i hasła.
+
+Przykładowy payload:
 
 ```json
 {
@@ -15,9 +56,35 @@
 }
 ```
 
-- Logowanie:  
-  **POST /api/auth/login**  
-  Uwierzytelnia użytkownika i **zwraca** token JWT. Przykładowy payload:
+Odpowiedź:
+Sukces (201 Created):
+
+```json
+{
+  "message": "User registered successfully.",
+  "user": {
+    "id": 1,
+    "login": "exampleUser",
+    "email": "example@email.com",
+    "createdAt": "2025-01-08T12:00:00Z"
+  }
+}
+```
+
+Błąd (400 Bad Request):
+
+```json
+{
+  "error": "Validation failed.",
+  "details": { "email": "Email is already in use." }
+}
+```
+
+### 2. Logowanie:
+
+**POST /api/auth/login**  
+ Uwierzytelnia użytkownika i **zwraca** token JWT. Do wykorzystania w kolejnych zapytaniach.  
+ Przykładowy payload:
 
 ```json
 {
@@ -26,58 +93,63 @@
 }
 ```
 
-- Wylogowanie:  
-  **POST /api/auth/logout**  
-  Unieważnia token JWT
+Odpowiedź
+Sukces (200 OK):
 
-- Odświeżenie Tokenu:  
-  **POST /api/auth/refresh**  
-  Zwraca nowy token JWT, jeśli poprzedni jest prawidłowy, ale wygasł
+```json
+{
+  "message": "Login successful.",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refreshToken": "dGhpc19pc19hX3JlZnJlc2hfdG9rZW4...",
+  "user": { "id": 1, "login": "exampleUser", "email": "example@email.com" }
+}
+```
+
+Błąd (401 Unauthorized):
+
+```json
+{ "error": "Invalid credentials." }
+```
+
+### 3. Wylogowanie:
+
+    **POST /api/auth/logout**
+    Unieważnia token JWT
+    Payload:
+
+Sukces (200 OK):
+
+```json
+{ "message": "Logout successful." }
+```
+
+Błąd (400 Bad Request):
+
+```json
+{ "error": "Invalid or missing refresh token." }
+```
+
+### 4. Odświeżenie Tokenu:
+
+**POST /api/auth/refresh**  
+ Zwraca nowy token JWT, jeśli poprzedni jest prawidłowy, ale wygasł
 
 ## Końcówki dla użytkownika
 
-- Pobierz profil użytkownika  
-  **GET /api/users/:id**  
-  Zwraca profil dowolnego użytkownika
+### 1. Pobierz profil użytkownika
 
-  Parametry w URL:  
-   id: ID użytkownika (integer)
+**GET /api/users/:id**  
+ Zwraca profil dowolnego użytkownika
 
-  Kod odpowiedzi:
+Parametry w URL:  
+ id: ID użytkownika (integer)
 
-  - 200 OK:  
-    Profil użytkownika został pomyślnie pobrany.
-  - 404 Not Found:  
-    Użytkownik o podanym ID nie istnieje.
+Kod odpowiedzi:
 
-Przykładowa odpowiedź (200 OK):
-
-```json
-{
-  "id_user": 1,
-  "login": "exampleUser",
-  "email": "example@email.com"
-}
-```
-
-- Pobierz profil zalogowanego użytkownika  
-  **GET /api/users/profile**  
-  Zwraca profil aktualnie zalogowanego użytkownika (wymaga tokenu JWT)
-
-  Headers:
-
-  - Authorization: Bearer \<token\>
-
-  Parametry w URL:
-
-  - id: ID użytkownika (integer)
-
-  Kod odpowiedzi:
-
-  - 200 OK:  
-    Prof Profil użytkownika został pomyślnie pobrany.il użytkownika został pomyślnie pobrany.
-  - 401 Unauthorized:  
-    Brak tokenu lub token jest nieprawidłowy
+- 200 OK:  
+  Profil użytkownika został pomyślnie pobrany.
+- 404 Not Found:  
+  Użytkownik o podanym ID nie istnieje.
 
 Przykładowa odpowiedź (200 OK):
 
@@ -89,22 +161,53 @@ Przykładowa odpowiedź (200 OK):
 }
 ```
 
-- Zaktualizuj profil użytkownika
-  **PUT /api/users/profile**  
-   Aktualizuje profil zalogowanego użytkownika
+### 2. Pobierz profil zalogowanego użytkownika
 
-  Headers:
+**GET /api/users/profile**  
+ Zwraca profil aktualnie zalogowanego użytkownika (wymaga tokenu JWT)
 
-  - Authorization: Bearer \<token\>
+Headers:
 
-  Kod odpowiedzi:
+- Authorization: Bearer \<token\>
 
-  - 200 OK:  
-    Prof Profil użytkownika został pomyślnie pobrany.il użytkownika został pomyślnie pobrany.
-  - 400 Bad Request:  
-    Nieprawidłowe dane wejściowe.
-  - 401 Unauthorized:  
-    Brak tokenu lub token jest nieprawidłowy
+Parametry w URL:
+
+- id: ID użytkownika (integer)
+
+Kod odpowiedzi:
+
+- 200 OK:  
+  Prof Profil użytkownika został pomyślnie pobrany.il użytkownika został pomyślnie pobrany.
+- 401 Unauthorized:  
+  Brak tokenu lub token jest nieprawidłowy
+
+Przykładowa odpowiedź (200 OK):
+
+```json
+{
+  "id_user": 1,
+  "login": "exampleUser",
+  "email": "example@email.com"
+}
+```
+
+### 3. Zaktualizuj profil użytkownika
+
+**PUT /api/users/profile**  
+ Aktualizuje profil zalogowanego użytkownika
+
+Headers:
+
+- Authorization: Bearer \<token\>
+
+Kod odpowiedzi:
+
+- 200 OK:  
+  Prof Profil użytkownika został pomyślnie pobrany.il użytkownika został pomyślnie pobrany.
+- 400 Bad Request:  
+  Nieprawidłowe dane wejściowe.
+- 401 Unauthorized:  
+  Brak tokenu lub token jest nieprawidłowy
 
 Przykładowy payload
 
@@ -125,50 +228,20 @@ Przykładowa odpowiedź (200 OK):
 }
 ```
 
-- Utwórz użytkownika  
-  **POST /api/users**  
-  Rejestruje nowego użytkownika.
+### 4. Pobierz wszystkich użytkowników
 
-  Kod odpowiedzi:
+**GET /api/users**  
+ Zwraca listę użytkowników z obsługą paginacji
 
-  - 201 Created:  
-    Użytkownik został pomyślnie utworzony
-  - 400 Bad Request:  
-    Nieprawidłowe dane wejściowe. (np. login, email już są w użyciu, błąd walidacji hasła)
+Parametry Zapytania (Query Parameters)
 
-Przykładowy payload
+- **page** (opcjonalne, domyślnie 1): Number strony
+- **limit** (opcjonalne, domyślnie 10): Liczba wyników na stronę.
 
-```json
-{
-  "login": "newUser",
-  "email": "newuser@email.com",
-  "password": "securepassword123"
-}
-```
+Kod odpowiedzi:
 
-Przykładowa odpowiedź (201 Created):
-
-```json
-{
-  "id_user": 2,
-  "login": "newUser",
-  "email": "newuser@email.com"
-}
-```
-
-- Pobierz wszystkich użytkoników (stronnicowanie/pagination)  
-  **GET /api/users**  
-   Zwraca listę użytkowników z obsługą paginacji
-
-  Parametry Zapytania (Query Parameters)
-
-  - **page** (opcjonalne, domyślnie 1): Number strony
-  - **limit** (opcjonalne, domyślnie 10): Liczba wyników na stronę.
-
-  Kod odpowiedzi:
-
-  - 200 OK:  
-    Lista użytkowników została pomyślnie pobrana.
+- 200 OK:  
+  Lista użytkowników została pomyślnie pobrana.
 
 Przykładowa odpowiedź (200 OK):
 
@@ -184,20 +257,21 @@ Przykładowa odpowiedź (200 OK):
 }
 ```
 
-- Usuń użytkownika
-  **DELETE /api/users/:id**
-  Usuwa użytkownika na podstawie podanego ID (tylko administratorzy lub jeżeli zgadza się token).
+### 5. Usuń użytkownika
 
-  Parametry w URL
+**DELETE /api/users/:id**  
+ Usuwa użytkownika na podstawie podanego ID (tylko administratorzy lub jeżeli zgadza się token).
 
-  - **id**: ID użytkownika do usunięcia (integer).
+Parametry w URL
 
-  Kod odpowiedzi:
+- **id**: ID użytkownika do usunięcia (integer).
 
-  - 200 OK:  
-    Użytkownik został pomyślnie usunięty.
-  - 403 Forbidden:  
-    Brak uprawnień do usunięcia użytkownika.
+Kod odpowiedzi:
+
+- 200 OK:  
+  Użytkownik został pomyślnie usunięty.
+- 403 Forbidden:  
+  Brak uprawnień do usunięcia użytkownika.
 
 Przykładowa odpowiedź (200 OK):
 
@@ -209,19 +283,20 @@ Przykładowa odpowiedź (200 OK):
 
 ## Końcówki scenariuszy
 
-- Pobierz wszystkie scenariusze  
-  **GET /api/scenarios**  
-  Zwraca listę wszystkich dostępnych scenariuszy. Używa paginacji, aby zwrócić tylko część wyników.
+### 1. Pobierz wszystkie scenariusze
 
-  Parametry zapytania:
+**GET /api/scenarios**  
+ Zwraca listę wszystkich dostępnych scenariuszy. Używa paginacji, aby zwrócić tylko część wyników.
 
-  **page** (integer) - Numer strony (domyślnie 1).  
-  **limit** (integer) - Liczba scenariuszy na stronę (domyślnie 10).
+Parametry zapytania:
 
-  Kody odpowiedzi:
+**page** (integer) - Numer strony (domyślnie 1).  
+ **limit** (integer) - Liczba scenariuszy na stronę (domyślnie 10).
 
-  - 200 OK - Zapytanie zakończone sukcesem, zwrócono dane.
-  - 400 Bad Request - Nieprawidłowe parametry zapytania (np. limit poza dozwolonym zakresem).
+Kody odpowiedzi:
+
+- 200 OK - Zapytanie zakończone sukcesem, zwrócono dane.
+- 400 Bad Request - Nieprawidłowe parametry zapytania (np. limit poza dozwolonym zakresem).
 
 Odpowiedź: 200 OK
 
@@ -248,18 +323,19 @@ Odpowiedź: 200 OK
 }
 ```
 
-- Pobierz scenariusz po ID  
-  **GET /api/scenarios/:id**  
-  Zwraca szczegółowe informacje o scenariuszu na podstawie jego ID oraz jego 1 krok (korzeń drzewa).
+### 2. Pobierz scenariusz po ID
 
-  Parametry:
-  id (integer) - ID scenariusza (wymagane).
+**GET /api/scenarios/:id**  
+ Zwraca szczegółowe informacje o scenariuszu na podstawie jego ID oraz jego 1 krok (korzeń drzewa).
 
-  Kody odpowiedzi:
+Parametry:
+id (integer) - ID scenariusza (wymagane).
 
-  - 200 OK - Scenariusz znaleziony, zwrócono szczegóły.
-  - 404 Not Found - Scenariusz o podanym ID nie istnieje.
-  - 400 Bad Request - Nieprawidłowy format ID.
+Kody odpowiedzi:
+
+- 200 OK - Scenariusz znaleziony, zwrócono szczegóły.
+- 404 Not Found - Scenariusz o podanym ID nie istnieje.
+- 400 Bad Request - Nieprawidłowy format ID.
 
 Odpowiedź: 200 OK
 
@@ -282,14 +358,16 @@ Odpowiedź: 200 OK
 }
 ```
 
-- Stwórz scenariusz  
-   **POST /api/scenarios**  
-  Tworzy nowy scenariusz z podanymi danymi.
+### 3. Stwórz scenariusz
 
-  Kody odpowiedzi:
+    **POST /api/scenarios**
 
-  - 201 Created - Scenariusz został pomyślnie stworzony.
-  - 400 Bad Request - Brak wymaganych pól lub nieprawidłowe dane wejściowe.
+Tworzy nowy scenariusz z podanymi danymi.
+
+Kody odpowiedzi:
+
+- 201 Created - Scenariusz został pomyślnie stworzony.
+- 400 Bad Request - Brak wymaganych pól lub nieprawidłowe dane wejściowe.
 
 Odpowiedź: 201 Created
 
@@ -301,13 +379,14 @@ Odpowiedź: 201 Created
 }
 ```
 
-- Zaktualizuj scenariusz  
-  **PUT /api/scenarios/:id**  
-  Aktualizuje istniejący scenariusz po jego ID.
+### 4. Zaktualizuj scenariusz
 
-  Parametry:
-  id (integer) - ID scenariusza (wymagane).
-  Odpowiedź: 200 OK
+**PUT /api/scenarios/:id**  
+ Aktualizuje istniejący scenariusz po jego ID.
+
+Parametry:
+id (integer) - ID scenariusza (wymagane).
+Odpowiedź: 200 OK
 
 ```json
 {
@@ -319,24 +398,24 @@ Odpowiedź: 201 Created
 
 Kody odpowiedzi:
 
-200 OK - Scenariusz został zaktualizowany.
-400 Bad Request - Nieprawidłowy format danych.
-404 Not Found - Scenariusz o podanym ID nie istnieje.
-422 Unprocessable Entity - Błędy walidacji danych.
+- 200 OK - Scenariusz został zaktualizowany.
+- 400 Bad Request - Nieprawidłowy format danych.
+- 404 Not Found - Scenariusz o podanym ID nie istnieje.
 
-- Usuń scenariusz  
-  **DELETE /api/scenarios/:id**
-  Usuwa scenariusz na podstawie jego ID.
-  Parametry:
+### 5. Usuń scenariusz
 
-  id (integer) - ID scenariusza (wymagane).
-  Odpowiedź: 200 OK
+**DELETE /api/scenarios/:id**
+Usuwa scenariusz na podstawie jego ID.
+Parametry:
 
-  Kody odpowiedzi:
+id (integer) - ID scenariusza (wymagane).
+Odpowiedź: 200 OK
 
-  200 OK - Scenariusz został pomyślnie usunięty.
-  404 Not Found - Scenariusz o podanym ID nie istnieje.
-  400 Bad Request - Błędne ID scenariusza. 6. Pobierz kroki dla scenariusza
+Kody odpowiedzi:
+
+- 200 OK - Scenariusz został pomyślnie usunięty.
+- 404 Not Found - Scenariusz o podanym ID nie istnieje.
+- 400 Bad Request - Błędne ID scenariusza. 6. Pobierz kroki dla scenariusza
 
 ```json
 {
@@ -344,149 +423,29 @@ Kody odpowiedzi:
 }
 ```
 
-- Pobierz wszystkie kroki scenariusza  
-  **GET /api/scenarios/:id/steps**  
-  Zwraca wszystkie kroki związane z danym scenariuszem. Używa paginacji, aby zwrócić tylko część wyników.
+## Końcówki gry
 
-Parametry:
-id (integer) - ID scenariusza, dla którego pobieramy kroki.
-page (integer) - Numer strony (domyślnie 1).
-limit (integer) - Liczba kroków na stronę (domyślnie 10).
-Odpowiedź: 200 OK
+### 1. Utwórz grę:
 
-Kody odpowiedzi:
+**POST /api/games**  
+Ten endpoint pozwala użytkownikowi stworzyć nową grę, wybrać scenariusz i tworzy nową sesję początkową.
 
-- 200 OK - Zapytanie zakończone sukcesem, zwrócono kroki.
-- 400 Bad Request - Nieprawidłowe parametry zapytania.
-- 404 Not Found - Scenariusz o podanym ID nie istnieje.
-
-```json
-{
-  "data": [
-    {
-      "id": 1,
-      "title": "Zaczynasz swoją podróż",
-      "text": "Jesteś na skraju ogromnego lasu."
-    },
-    {
-      "id": 2,
-      "title": "Przekrocz rzekę",
-      "text": "Szybko płynąca rzeka blokuje Twoją drogę."
-    }
-  ],
-  "pagination": {
-    "page": 1,
-    "limit": 10,
-    "total": 30,
-    "totalPages": 3
-  }
-}
-```
-
-- Stwórz krok w scenariuszu
-  **POST /api/scenarios/:id/steps**
-  Tworzy nowy krok w ramach scenariusza.
-
-Parametry:
-
-id (integer) - ID scenariusza, do którego dodajemy krok.
-Kody odpowiedzi:
-
-201 Created - Krok został pomyślnie stworzony.
-400 Bad Request - Brak wymaganych pól lub nieprawidłowe dane.
-
-```json
-{
-  "id": 3,
-  "title": "Wspinaj się na górę",
-  "text": "Przed Tobą stroma góra. Czy spróbujesz się na nią wspiąć?"
-}
-```
-
-- Zaktualizuj krok w scenariuszu  
-  **PUT /api/scenarios/:id/steps/:id_step**  
-  Aktualizuje istniejący krok w scenariuszu.
-
-  Parametry:
-  id (integer) - ID scenariusza, do którego należy krok.
-  id_step (integer) - ID kroku do zaktualizowania.
-
-  Kody odpowiedzi:
-
-  - 200 OK - Krok został zaktualizowany.
-  - 400 Bad Request - Błędne dane wejściowe.
-  - 404 Not Found - Krok o podanym ID nie istnieje.
-
-Odpowiedź: 200 OK
-
-```json
-{
-  "id": 3,
-  "title": "Wspinaj się na wysoką górę",
-  "text": "Góra stała się jeszcze bardziej stroma. Czy uda Ci się dotrzeć na szczyt?"
-}
-```
-
-9. Usuń krok w scenariuszu  
-   **DELETE /api/scenarios/:id/steps/:id**  
-   Usuwa krok w scenariuszu.
-
-Parametry:  
- id (integer) - ID scenariusza, do którego należy krok.
-id_step (integer) - ID kroku do usunięcia.
-Odpowiedź: 200 OK
-
-Kody odpowiedzi:
-
-- 200 OK - Krok został usunięty.
-- 404 Not Found - Krok o podanym ID nie istnieje.
-
-```json
-{
-  "message": "Krok został pomyślnie usunięty."
-}
-```
-
----
-
-## TODO: Końcówki kroków
-
-- Pobierz aktualny krok:
-  **GET /api/steps/current**
-  Zwraca aktualny krok dla aktywnej sesji zalogowanego użytkownika.
-
--Podejmij decyzję:
-**POST /api/steps/decision**
-Przyjmuje decyzję użytkownika i przechodzi do następnego kroku.
 Przykładowy payload:
 
 ```json
 {
-  "id_choice": 2
-}
-```
-
-## Końcówki gry
-
-- Utwórz grę:  
-  **POST /api/games**  
-  Ten endpoint pozwala użytkownikowi stworzyć nową grę, wybrać scenariusz i tworzy nową sesję początkową.
-  payload:
-
-  Kody odpowiedzi:
-
-  - 201 Created - Gra została pomyślnie utworzona.
-  - 400 Bad Request - Brak wymaganych danych lub nieprawidłowy format.
-
-```json
-{
-TODO: powininen też zawierac id uzytkownika bioracego udzial w grze
+  "authorId": 1,
   "scenarioId": 1, // ID wybranego scenariusza
   "gameTitle": "My Adventure"
 }
 ```
 
-Response (201 Created)
+Kody odpowiedzi:
+
+- **201 Created** - Gra została pomyślnie utworzona.
+- **400 Bad Request** - Brak wymaganych danych lub nieprawidłowy format.
+
+Response (201 Created):
 
 ```json
 {
@@ -498,16 +457,17 @@ Response (201 Created)
 }
 ```
 
-- Pobierz status gry:  
-  **GET /api/games/id**  
-  Ten punkt końcowy zwraca szczegóły i status danej gry.
+### 2. Pobierz status gry:
 
-  Kody odpowiedzi:
+**GET /api/games/:id**  
+Ten punkt końcowy zwraca szczegóły i status danej gry.
 
-  - 200 OK - Gra jest aktywna, zwrócono stan.
-  - 404 Not Found - Gra o podanym ID nie istnieje.
+Kody odpowiedzi:
 
-Response (200 OK)
+- **200 OK** - Gra jest aktywna, zwrócono stan.
+- **404 Not Found** - Gra o podanym ID nie istnieje.
+
+Response (200 OK):
 
 ```json
 {
@@ -536,104 +496,347 @@ Response (200 OK)
 }
 ```
 
-- Utworzenie sesji gry
-  **POST /api/games/:id_game/sessions**
-  Tworzy nową sesję w obrębie danej gry.
+### 3. Pobierz wszystkie gry:
 
-  Kody odpowiedzi:
-  - 201 Created - Sesja została pomyślnie utworzona.
-  - 400 Bad Request - Brak danych użytkownika lub ID gry.
+**GET /api/games**  
+Zwraca listę wszystkich gier (może być przydatne dla administratorów lub do pobrania historii gier).
+
+Response (200 OK):
 
 ```json
-{
-  "user_id": 1 // ID użytkownika, który zaczyna sesję w grze
-}
+[
+  {
+    "gameId": 1,
+    "userId": 1,
+    "scenarioId": 1,
+    "currentStepId": 2,
+    "status": "active"
+  },
+  {
+    "gameId": 2,
+    "userId": 2,
+    "scenarioId": 2,
+    "currentStepId": 5,
+    "status": "completed"
+  }
+]
 ```
 
+### 4. Pobierz krok gry:
 
-Response: (201 Created)  
-Sesja zostaje utworzona i przypisana do gry.
-```json
-{
-  "id_session": 1,
-  "id_game": 1,
-  "status": "started",
-  "current_step_id": 1  // ID pierwszego kroku w scenariuszu
-}
-```
+**GET /api/games/:id/step**  
+Pobiera szczegóły bieżącego kroku gry na podstawie ID gry.
 
-- TODO: Pobierz wszystkie gry:
-  **GET /api/games**
-  Zwraca listę wszystkich gier (może być przydatne dla administratorów lub do pobrania historii gier).
+Kody odpowiedzi:
 
-## TODO: Końcówki sesji
-
-- Rozpocznij sesję:
-  **POST /api/sessions**
-  Tworzy sesję dla użytkownika i przypisuje ją do gry.
-
-- Pobierz aktywną sesję:
-  **GET /api/sessions/active**
-  Zwraca aktualną aktywną sesję zalogowanego użytkownika.
-
-- Zakończ sesję:
-  **PUT /api/sessions/:id_ses/end**
-  Kończy sesję po zakończeniu gry przez użytkownika.
-
-## Końcówki decyzji
-
-- Podejmowanie decyzji
-  **POST /api/games/:gameId/decisions**
-  Pozwala użytkownikowi podjąć decyzję i przejść do następnego kroku w grze na podstawie dokonanej decyzji.
-
-
-  Kody odpowiedzi:
-  - 200 OK - Decyzja została podjęta, użytkownik przeszedł do kolejnego kroku.
-  - 400 Bad Request - Nieprawidłowy wybór decyzji.
-
-Payload
-```json
-{
-  "decisionId": 1 // ID podjętej decyzji
-}
-````
+- **200 OK** - Zwrócono szczegóły kroku gry.
+- **404 Not Found** - Gra o podanym ID nie istnieje.
 
 Response (200 OK):
 
 ```json
 {
-  "gameId": 1,
-  "userId": 1,
-  "currentStepId": 4,
-  "status": "active"
+  "stepId": 2,
+  "title": "In the Forest",
+  "text": "You are standing at the edge of a dark forest.",
+  "decisions": [
+    {
+      "id": 1,
+      "title": "Enter the forest",
+      "nextStepId": 3
+    },
+    {
+      "id": 2,
+      "title": "Turn back",
+      "nextStepId": 4
+    }
+  ]
 }
 ```
 
-## Przykładowy przebieg gry
+### 5. Aktualizuj krok gry:
 
-1. Logowanie użytkownika: POST /api/auth/login  
-   Użytkownik otrzymuje token JWT.
-2. Rozpoczęcie gry: POST /api/games  
-   Tworzy nową grę i sesję.
-3. Pobranie aktualnego kroku: GET /api/steps/current  
-   Zwraca pierwszy krok scenariusza.
-4. Podejmowanie decyzji: POST /api/steps/decision  
-   Przekazuje wybór i przechodzi do następnego kroku.
+**POST /api/games/:id/step**  
+Aktualizuje krok w grze na podstawie ID gry.
 
-- Powtarzanie kroków 3–4:  
-  Powtarzaj do momentu zakończenia gry lub zakończenia sesji.
+Przykładowy payload:
 
-# TODO
+```json
+{
+  "stepId": 2,
+  "userDecision": 1 // ID podjętej decyzji przez użytkownika
+}
+```
 
-- specify which endpoint require JWT token
-- specify return status codes
-- specify payloads for endpoints
-- specify returned data
+Kody odpowiedzi:
+
+- **200 OK** - Krok gry został pomyślnie zaktualizowany.
+- **400 Bad Request** - Brak wymaganych danych lub nieprawidłowy format.
+
+Response (200 OK):
+
+```json
+{
+  "stepId": 3,
+  "title": "Inside the Forest",
+  "text": "You have entered the forest. It is dark and ominous.",
+  "decisions": [
+    {
+      "id": 3,
+      "title": "Proceed forward",
+      "nextStepId": 5
+    },
+    {
+      "id": 4,
+      "title": "Look around",
+      "nextStepId": 6
+    }
+  ]
+}
+```
+
+## Końcówki sesji
+
+- TODO:
+
+---
+
+## Przebieg Autoryzacji Użytkownika
+
+Autoryzacja użytkownika obejmuje proces rejestracji, logowania, odświeżania tokenu JWT oraz uzyskiwania dostępu do zasobów za pomocą tokenu zapisanego w pamięci przeglądarki (local storage). Poniżej przedstawiono kroki autoryzacji z perspektywy użytkownika:
+
+### 1. Rejestracja Użytkownika
+
+**Endpoint:** `POST /api/auth/register`  
+Użytkownik rejestruje się, podając login, adres e-mail i hasło.
+
+**Przykładowy przebieg:**
+
+1. Użytkownik wypełnia formularz rejestracji (login, e-mail, hasło).
+2. Po przesłaniu formularza serwer zwraca potwierdzenie utworzenia konta.
+
+**Przykładowa odpowiedź (201 Created):**
+
+```json
+{
+  "message": "User registered successfully.",
+  "user": {
+    "id": 1,
+    "login": "exampleUser",
+    "email": "example@email.com",
+    "createdAt": "2025-01-08T12:00:00Z"
+  }
+}
+```
+
+### 2. Logowanie Użytkownika
+
+**Endpoint:** `POST /api/auth/login`  
+Użytkownik loguje się, podając swój login i hasło. Po uwierzytelnieniu otrzymuje token JWT oraz refresh token.
+
+Przykładowy przebieg:
+
+Użytkownik wypełnia formularz logowania (login, hasło).
+Serwer weryfikuje dane i zwraca token JWT, który użytkownik zapisuje w local storage.  
+Przykładowa odpowiedź (200 OK):
+
+```json
+{
+  "message": "Login successful.",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refreshToken": "dGhpc19pc19hX3JlZnJlc2hfdG9rZW4...",
+  "user": {
+    "id": 1,
+    "login": "exampleUser",
+    "email": "example@email.com"
+  }
+}
+```
+
+### 3. Odświeżenie Tokenu
+
+**Endpoint:** `POST /api/auth/refresh`
+Kiedy token JWT wygasa, użytkownik może za pomocą refresh tokenu uzyskać nowy token JWT.
+
+Przykładowy przebieg:
+
+Aplikacja zauważa, że token JWT wygasł.
+Automatycznie wysyła refresh token do serwera, aby odnowić token JWT.
+Nowy token JWT zostaje zapisany w local storage.
+Przykładowa odpowiedź (200 OK):
+
+```json
+{
+  "message": "Token refreshed successfully.",
+  "token": "newly_generated_JWT_token",
+  "refreshToken": "new_refresh_token"
+}
+```
+
+### 4. Pobranie Profilu Użytkownika
+
+**Endpoint:** `GET /api/users/profile`  
+Użytkownik może pobrać swoje dane, korzystając z tokenu JWT przesłanego w nagłówku.
+
+Przykładowy przebieg:
+
+Aplikacja przesyła zapytanie do serwera z tokenem JWT w nagłówku.
+Serwer weryfikuje token i zwraca dane zalogowanego użytkownika.
+Przykładowa odpowiedź (200 OK):
+
+```json
+{
+  "id_user": 1,
+  "login": "exampleUser",
+  "email": "example@email.com"
+}
+```
+
+### 5. Otwieranie Aplikacji z Zapisanym Tokenem
+
+Gdy użytkownik ponownie otwiera aplikację:
+
+1. Aplikacja sprawdza, czy token JWT jest zapisany w local storage.
+2. Jeśli token istnieje:
+   - Próbuje pobrać profil użytkownika.
+   - W przypadku wygaśnięcia tokenu JWT odświeża go za pomocą refresh tokenu.
+   - TODO: (w przypadku wygaśniecia tokenu usuń go z local storage i po prostu pokaż ekran logowania)
+3. Jeśli tokenu brak lub jest nieprawidłowy, użytkownik zostaje przekierowany na stronę logowania.
+
+### Uwagi:
+
+- Token JWT służy do autoryzacji przy każdym zapytaniu do zasobów chronionych.
+- Refresh token jest używany tylko w przypadku wygaśnięcia tokenu JWT.
+- Dane użytkownika nie są trwale przechowywane w aplikacji, a jedynie uzyskiwane w czasie rzeczywistym dzięki tokenom.
+
+---
+
+## Przebieg gry
+
+1. **Logowanie użytkownika:**  
+   **Endpoint:** `POST /api/auth/login`  
+   Użytkownik loguje się, podając swoje dane uwierzytelniające. W odpowiedzi otrzymuje token JWT, który będzie używany do autoryzacji w kolejnych zapytaniach.
+
+2. **Rozpoczęcie gry:**  
+   **Endpoint:** `POST /api/games`  
+   Użytkownik inicjuje nową grę. Tworzona jest nowa sesja gry powiązana z użytkownikiem oraz wybranym scenariuszem. Odpowiedź zawiera unikalne `id` nowej gry.
+
+3. **Pobranie aktualnego kroku:**  
+   **Endpoint:** `GET /api/games/:id/step`  
+   Użytkownik przesyła zapytanie o aktualny krok scenariusza w kontekście konkretnej gry (z `id` gry w URL). W odpowiedzi otrzymuje szczegóły kroku, który użytkownik musi podjąć.  
+   Odpowiedni krok dla gracza jest wybierany na podstawie jego userId zakodowanego w JWT
+
+4. **Podejmowanie decyzji:**  
+   **Endpoint:** `POST /api/games/:id/step`  
+   Użytkownik przesyła swoją decyzję dotyczącą aktualnego kroku dla konkretnej gry. Na jej podstawie aplikacja przechodzi do następnego kroku w scenariuszu.
+
+5. **Powtarzanie kroków 3-4:**  
+   Powtarzaj sekwencję pobrania aktualnego kroku i podejmowania decyzji do momentu zakończenia gry lub przerwania sesji przez użytkownika.
+
+---
+
+## Wersje gry
+
+### **Wersja 1.0**
+
+- **Funkcjonalność:**
+  - Pobieranie szczegółów aktualnego kroku gry przez endpoint `GET /api/games/:id/step`.
+  - Podejmowanie decyzji dotyczących kroków gry przez endpoint `POST /api/games/:id/step`.
+  - Wszystkie kroki są realizowane w pełni wirtualnie (brak integracji z GPS lub lokalizacją).
+
+---
+
+### **Wersja 2.0**
+
+- **Funkcjonalność:**
+
+  - Dodanie obsługi lokalizacji GPS.
+  - Każdy krok w scenariuszu może wymagać odwiedzenia określonego miejsca.
+  - Użytkownik musi wysłać swoją bieżącą lokalizację jako część decyzji.
+
+- **Zmiany w endpointach:**
+
+  - **Pobranie aktualnego kroku:**
+
+    - Endpoint: `GET /api/games/:id/step`.
+    - Odpowiedź zawiera również informacje o lokalizacji, do której użytkownik musi się udać, aby wykonać krok.
+
+  - **Podejmowanie decyzji z lokalizacją:**
+
+    - Endpoint: `POST /api/games/:id/step`.
+    - Użytkownik wysyła decyzję oraz swoje bieżące współrzędne GPS.
+
+    **Przykład payload:**
+
+    ```json
+    {
+      "decision": "move forward",
+      "location": {
+        "latitude": 52.2297,
+        "longitude": 21.0122
+      }
+    }
+    ```
+
+- **Walidacja lokalizacji:**
+  - Serwer weryfikuje, czy użytkownik znajduje się w wymaganym promieniu od wskazanej lokalizacji przed zaakceptowaniem decyzji.
+
+---
+
+### **Wersja 3.0**
+
+- **Funkcjonalność:**
+
+  - Dodanie trybu multiplayer.
+  - Każdy gracz w grze otrzymuje własne, unikalne decyzje w trakcie gry.
+  - Decyzje są dostosowane indywidualnie na podstawie identyfikatora użytkownika zakodowanego w tokenie JWT.
+
+- **Zmiany w endpointach:**
+
+  - **Pobranie aktualnego kroku:**
+
+    - Endpoint: `GET /api/games/:id/step`.
+    - Odpowiedź zawiera krok gry specyficzny dla danego użytkownika na podstawie jego `userId` zakodowanego w JWT.
+
+    **Przykład odpowiedzi dla gracza 1:**
+
+    ```json
+    {
+      "step": "Find the hidden object near the fountain",
+      "details": {
+        "location": "Central Park, Fountain Area",
+        "hint": "Look under the largest rock."
+      }
+    }
+    ```
+
+    **Przykład odpowiedzi dla gracza 2:**
+
+    ```json
+    {
+      "step": "Solve the puzzle near the statue",
+      "details": {
+        "location": "Central Park, Statue Area",
+        "hint": "Combine the symbols on the statue base."
+      }
+    }
+    ```
+
+- **Podejmowanie decyzji:**
+  - Endpoint `POST /api/games/:id/step` działa w trybie multiplayer tak samo jak w poprzednich wersjach, ale serwer obsługuje równocześnie różne kroki dla różnych graczy w tej samej grze.
+
+---
+
+# Uwagi:
+
+- Token JWT powinien być przesyłany w nagłówku `Authorization` w każdym zapytaniu.
+- Decyzje użytkownika mogą zmieniać przebieg scenariusza gry w zależności od implementacji backendu.
+- **PUT** jest odpowienikiem **GET**, więc przy aktualizacji, powinien on wstawiać całkowicie świeży zasób, nie aktualizaowac jego część.
 
 # Do rozważenia
 
 1. Przy DELETE zasobu, według mnie w przypadku nie znalezienia, powinniśmy zwracać 200, ponieważ w ostateczności osiągneliśmy cel i zasobu nie ma na serwerze.
-2. Jak określić błędy i wiadomości czy zakodować to jako
+2. Jak określić błędy i wiadomości czy zakodować to jako
 
 ```json
 {
@@ -649,8 +852,4 @@ lub
 }
 ```
 
-3. Czy w JWT kodowac id użytkownika czy id sesji, jak podtrzymać sesje na mobilce, dekodować token czy po wyjsciu zapisywać id do local storage
-
-# Uwagi
-
-- **PUT** jest odpowienikiem **GET**, więc przy aktualizacji, powinien on wstawiać całkowicie świeży zasób, nie aktualizaowac jego część.
+3. Czy w JWT kodowac id użytkownika czy id sesji, jak podtrzymać sesje na mobilce, dekodować token czy po wyjsciu zapisywać id do local storage
